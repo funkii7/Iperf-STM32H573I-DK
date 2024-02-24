@@ -1,0 +1,297 @@
+diff --git a/Core/Inc/main.h b/Core/Inc/main.h
+index f786673..70299e1 100644
+--- a/Core/Inc/main.h
++++ b/Core/Inc/main.h
+@@ -57,8 +57,7 @@ void Error_Handler(void);
+ /* USER CODE END EFP */
+ 
+ /* Private defines -----------------------------------------------------------*/
+-#define LED_RED_Pin GPIO_PIN_4
+-#define LED_RED_GPIO_Port GPIOG
++
+ 
+ /* USER CODE BEGIN Private defines */
+ 
+diff --git a/Core/Inc/stm32h5xx_hal_conf.h b/Core/Inc/stm32h5xx_hal_conf.h
+index 2f27cc4..655f367 100644
+--- a/Core/Inc/stm32h5xx_hal_conf.h
++++ b/Core/Inc/stm32h5xx_hal_conf.h
+@@ -103,7 +103,7 @@
+   *        (when HSE is used as system clock source, directly or through the PLL).
+   */
+ #if !defined  (HSE_VALUE)
+-  #define HSE_VALUE    8000000U /*!< Value of the External oscillator in Hz */
++  #define HSE_VALUE    25000000U /*!< Value of the External oscillator in Hz */
+ #endif /* HSE_VALUE */
+ 
+ #if !defined  (HSE_STARTUP_TIMEOUT)
+diff --git a/Core/Src/main.c b/Core/Src/main.c
+index bea2a80..7a692ce 100644
+--- a/Core/Src/main.c
++++ b/Core/Src/main.c
+@@ -149,16 +149,19 @@ void SystemClock_Config(void)
+   /** Initializes the RCC Oscillators according to the specified parameters
+   * in the RCC_OscInitTypeDef structure.
+   */
+-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+-  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS_DIGITAL;
++  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSI;
++  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
++  RCC_OscInitStruct.HSIDiv = RCC_HSI_DIV1;
++  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
++  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSE;
+-  RCC_OscInitStruct.PLL.PLLM = 4;
+-  RCC_OscInitStruct.PLL.PLLN = 250;
++  RCC_OscInitStruct.PLL.PLLSource = RCC_PLL1_SOURCE_HSI;
++  RCC_OscInitStruct.PLL.PLLM = 8;
++  RCC_OscInitStruct.PLL.PLLN = 60;
+   RCC_OscInitStruct.PLL.PLLP = 2;
+   RCC_OscInitStruct.PLL.PLLQ = 2;
+   RCC_OscInitStruct.PLL.PLLR = 2;
+-  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_1;
++  RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1_VCIRANGE_3;
+   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1_VCORANGE_WIDE;
+   RCC_OscInitStruct.PLL.PLLFRACN = 0;
+   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
+@@ -181,6 +184,7 @@ void SystemClock_Config(void)
+   {
+     Error_Handler();
+   }
++
+ }
+ 
+ /**
+@@ -211,7 +215,7 @@ static void MX_ETH_Init(void)
+   heth.Init.MediaInterface = HAL_ETH_RMII_MODE;
+   heth.Init.TxDesc = DMATxDscrTab;
+   heth.Init.RxDesc = DMARxDscrTab;
+-  heth.Init.RxBuffLen = 1524;
++  heth.Init.RxBuffLen = 1536;
+ 
+   /* USER CODE BEGIN MACADDRESS */
+ 
+@@ -328,15 +332,24 @@ static void MX_GPIO_Init(void)
+   __HAL_RCC_GPIOG_CLK_ENABLE();
+ 
+   /*Configure GPIO pin Output Level */
+-  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_RESET);
++  HAL_GPIO_WritePin(GPIOI, GPIO_PIN_9, GPIO_PIN_SET);
++
++  /*Configure GPIO pin Output Level */
++  HAL_GPIO_WritePin(GPIOF, GPIO_PIN_1, GPIO_PIN_SET);
+ 
+-  /*Configure GPIO pin : LED_RED_Pin */
+-  GPIO_InitStruct.Pin = LED_RED_Pin;
++  /*Configure GPIO pin : PI9 */
++  GPIO_InitStruct.Pin = GPIO_PIN_9;
+   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+   GPIO_InitStruct.Pull = GPIO_NOPULL;
+-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+-  HAL_GPIO_Init(LED_RED_GPIO_Port, &GPIO_InitStruct);
++  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
++  HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+ 
++  /*Configure GPIO pin : PF1 */
++  GPIO_InitStruct.Pin = GPIO_PIN_1;
++  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
++  GPIO_InitStruct.Pull = GPIO_NOPULL;
++  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
++  HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+ /* USER CODE BEGIN MX_GPIO_Init_2 */
+ /* USER CODE END MX_GPIO_Init_2 */
+ }
+@@ -404,7 +417,7 @@ void Error_Handler(void)
+ 
+   while (1)
+   {
+-     HAL_GPIO_TogglePin(LED_RED_GPIO_Port,LED_RED_Pin);
++	 HAL_GPIO_TogglePin(GPIOF, GPIO_PIN_1);
+      HAL_Delay(1000);
+   }
+   /* USER CODE END Error_Handler_Debug */
+diff --git a/Core/Src/stm32h5xx_hal_msp.c b/Core/Src/stm32h5xx_hal_msp.c
+index c218875..d6c54bd 100644
+--- a/Core/Src/stm32h5xx_hal_msp.c
++++ b/Core/Src/stm32h5xx_hal_msp.c
+@@ -93,48 +93,40 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef* heth)
+     __HAL_RCC_ETHTX_CLK_ENABLE();
+     __HAL_RCC_ETHRX_CLK_ENABLE();
+ 
++    __HAL_RCC_GPIOG_CLK_ENABLE();
+     __HAL_RCC_GPIOC_CLK_ENABLE();
+     __HAL_RCC_GPIOA_CLK_ENABLE();
+-    __HAL_RCC_GPIOB_CLK_ENABLE();
+-    __HAL_RCC_GPIOG_CLK_ENABLE();
+     /**ETH GPIO Configuration
++    PG12     ------> ETH_TXD1
++    PG13     ------> ETH_TXD0
++    PG11     ------> ETH_TX_EN
+     PC1     ------> ETH_MDC
+     PA1     ------> ETH_REF_CLK
+     PA2     ------> ETH_MDIO
+-    PA7     ------> ETH_CRS_DV
+     PC4     ------> ETH_RXD0
+     PC5     ------> ETH_RXD1
+-    PB15     ------> ETH_TXD1
+-    PG11     ------> ETH_TX_EN
+-    PG13     ------> ETH_TXD0
++    PA7     ------> ETH_CRS_DV
+     */
+-    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;
++    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_11;
+     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+     GPIO_InitStruct.Pull = GPIO_NOPULL;
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+     GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+-
+-    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7;
+-    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+-    GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
++    HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+ 
+-    GPIO_InitStruct.Pin = GPIO_PIN_15;
++    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;
+     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+     GPIO_InitStruct.Pull = GPIO_NOPULL;
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+     GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+-    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
++    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+ 
+-    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_13;
++    GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7;
+     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+     GPIO_InitStruct.Pull = GPIO_NOPULL;
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+     GPIO_InitStruct.Alternate = GPIO_AF11_ETH;
+-    HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
++    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 
+     /* ETH interrupt Init */
+     HAL_NVIC_SetPriority(ETH_IRQn, 7, 0);
+@@ -165,24 +157,22 @@ void HAL_ETH_MspDeInit(ETH_HandleTypeDef* heth)
+     __HAL_RCC_ETHRX_CLK_DISABLE();
+ 
+     /**ETH GPIO Configuration
++    PG12     ------> ETH_TXD1
++    PG13     ------> ETH_TXD0
++    PG11     ------> ETH_TX_EN
+     PC1     ------> ETH_MDC
+     PA1     ------> ETH_REF_CLK
+     PA2     ------> ETH_MDIO
+-    PA7     ------> ETH_CRS_DV
+     PC4     ------> ETH_RXD0
+     PC5     ------> ETH_RXD1
+-    PB15     ------> ETH_TXD1
+-    PG11     ------> ETH_TX_EN
+-    PG13     ------> ETH_TXD0
++    PA7     ------> ETH_CRS_DV
+     */
++    HAL_GPIO_DeInit(GPIOG, GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_11);
++
+     HAL_GPIO_DeInit(GPIOC, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5);
+ 
+     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_7);
+ 
+-    HAL_GPIO_DeInit(GPIOB, GPIO_PIN_15);
+-
+-    HAL_GPIO_DeInit(GPIOG, GPIO_PIN_11|GPIO_PIN_13);
+-
+     /* ETH interrupt DeInit */
+     HAL_NVIC_DisableIRQ(ETH_IRQn);
+   /* USER CODE BEGIN ETH_MspDeInit 1 */
+@@ -202,39 +192,39 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+ {
+   GPIO_InitTypeDef GPIO_InitStruct = {0};
+   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
+-  if(huart->Instance==USART3)
++  if(huart->Instance==USART1)
+   {
+-  /* USER CODE BEGIN USART3_MspInit 0 */
++  /* USER CODE BEGIN USART1_MspInit 0 */
+ 
+-  /* USER CODE END USART3_MspInit 0 */
++  /* USER CODE END USART1_MspInit 0 */
+ 
+   /** Initializes the peripherals clock
+   */
+-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3;
+-    PeriphClkInitStruct.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
++    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART1;
++    PeriphClkInitStruct.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
+     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+     {
+       Error_Handler();
+     }
+ 
+     /* Peripheral clock enable */
+-    __HAL_RCC_USART3_CLK_ENABLE();
++    __HAL_RCC_USART1_CLK_ENABLE();
+ 
+-    __HAL_RCC_GPIOD_CLK_ENABLE();
+-    /**USART3 GPIO Configuration
+-    PD8     ------> USART3_TX
+-    PD9     ------> USART3_RX
++    __HAL_RCC_GPIOA_CLK_ENABLE();
++    /**USART1 GPIO Configuration
++    PA10     ------> USART1_RX
++    PA9     ------> USART1_TX
+     */
+-    GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
++    GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_9;
+     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+     GPIO_InitStruct.Pull = GPIO_NOPULL;
+     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+-    GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
+-    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
++    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;
++    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ 
+-  /* USER CODE BEGIN USART3_MspInit 1 */
++  /* USER CODE BEGIN USART1_MspInit 1 */
+ 
+-  /* USER CODE END USART3_MspInit 1 */
++  /* USER CODE END USART1_MspInit 1 */
+   }
+ 
+ }
+@@ -247,23 +237,23 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+ */
+ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
+ {
+-  if(huart->Instance==USART3)
++  if(huart->Instance==USART1)
+   {
+-  /* USER CODE BEGIN USART3_MspDeInit 0 */
++  /* USER CODE BEGIN USART1_MspDeInit 0 */
+ 
+-  /* USER CODE END USART3_MspDeInit 0 */
++  /* USER CODE END USART1_MspDeInit 0 */
+     /* Peripheral clock disable */
+-    __HAL_RCC_USART3_CLK_DISABLE();
++    __HAL_RCC_USART1_CLK_DISABLE();
+ 
+-    /**USART3 GPIO Configuration
+-    PD8     ------> USART3_TX
+-    PD9     ------> USART3_RX
++    /**USART1 GPIO Configuration
++    PA10     ------> USART1_RX
++    PA9     ------> USART1_TX
+     */
+-    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_8|GPIO_PIN_9);
++    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_10|GPIO_PIN_9);
+ 
+-  /* USER CODE BEGIN USART3_MspDeInit 1 */
++  /* USER CODE BEGIN USART1_MspDeInit 1 */
+ 
+-  /* USER CODE END USART3_MspDeInit 1 */
++  /* USER CODE END USART1_MspDeInit 1 */
+   }
+ 
+ }
