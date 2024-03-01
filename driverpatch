@@ -1,0 +1,24 @@
+1708c1708
+<   if(HAL_ETH_Transmit_IT(&eth_handle, &TxPacketCfg))
+---
+>   while(HAL_ETH_Transmit_IT(&eth_handle, &TxPacketCfg))
+1710c1710,1726
+<     return(NX_DRIVER_ERROR);
+---
+>     if(HAL_ETH_GetError(&eth_handle) & HAL_ETH_ERROR_BUSY)
+>     {
+> 
+>       if(nx_driver_information.nx_driver_information_deferred_events &
+>          NX_DRIVER_DEFERRED_PACKET_TRANSMITTED)
+>       {
+>         HAL_ETH_ReleaseTxPacket(&eth_handle);
+>       }
+>       else
+>       {
+>         tx_thread_relinquish();
+>       }
+>     }
+>     else
+>     {
+>       return(NX_DRIVER_ERROR);
+>     }
